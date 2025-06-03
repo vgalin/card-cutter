@@ -27,12 +27,21 @@ function toggleInputs(containerId, isEnabled, className = 'disabled-look') {
 
 // Specific toggle functions
 function toggleCropInputs() { toggleInputs('cropInputsContainer', getElementValue('enableCrop', 'checked')); updateLiveCropPreview(); }
-function toggleBleedInputs() { toggleInputs('bleedInputsContainer', getElementValue('enableBleed', 'checked')); }
+function toggleBleedInputs() {
+    toggleInputs('bleedInputsContainer', getElementValue('enableBleed', 'checked'));
+    toggleAutoDPI();
+}
 function toggleSharpenInputs() { toggleInputs('sharpenInputsContainer', getElementValue('enableSharpen', 'checked')); }
 function toggleAdjustmentInputs() { toggleInputs('adjustmentInputsContainer', getElementValue('enableAdjustments', 'checked')); }
 function toggleResizeInputs() { toggleInputs('resizeInputsContainer', getElementValue('enableResize', 'checked')); }
 function toggleRoundedCornersInputs() { toggleInputs('roundedCornersInputsContainer', getElementValue('enableRoundedCorners', 'checked')); }
 function toggleCardSizingInputs() { toggleInputs('cardSizingInputsContainer', getElementValue('enableCardSizingForPrint', 'checked')); }
+
+function toggleAutoDPI() {
+    const autoEnabled = getElementValue('useAutoDPI', 'checked');
+    const bleedDPIInput = document.getElementById('bleedDPI');
+    if (bleedDPIInput) bleedDPIInput.disabled = autoEnabled;
+}
 
 function togglePrintSheetInputs() {
     const enabled = getElementValue('enablePrintSheet', 'checked');
@@ -272,6 +281,7 @@ function initializeEventListeners() {
         'enableRoundedCorners': toggleRoundedCornersInputs,
         'enableCardSizingForPrint': toggleCardSizingInputs,
         'enablePrintSheet': togglePrintSheetInputs,
+        'useAutoDPI': toggleAutoDPI,
     };
     for (const id in toggleMap) {
         const checkbox = document.getElementById(id);

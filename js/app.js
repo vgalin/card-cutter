@@ -43,6 +43,7 @@ async function processImages() {
 
     const doBleed = getElementValue('enableBleed', 'checked');
     const bleedSettings = doBleed ? getCurrentBleedSettings() : { mm: 0, dpi: 300, cutMarks: false, cutLength: 0, cutThickness: 0 }; // from presets.js
+    const useAutoDPI = getElementValue('useAutoDPI', 'checked');
 
     const showPreviews = getElementValue('enableImagePreview', 'checked');
 
@@ -57,7 +58,7 @@ async function processImages() {
         referenceCardHeightMM *= 25.4;
     }
 
-    if (!isPositiveNumber(referenceCardWidthMM) || !isPositiveNumber(referenceCardHeightMM)) {
+    if (useAutoDPI && (!isPositiveNumber(referenceCardWidthMM) || !isPositiveNumber(referenceCardHeightMM))) {
         alert('Reference card dimensions must be positive numbers.');
         progressArea.innerHTML = '<p>Error: Invalid reference card size.</p>';
         return;
@@ -99,10 +100,13 @@ async function processImages() {
 
             let contentCanvas = workingCanvas; // This is the canvas before final print sizing and bleed
 
-            const dpiFromWidth = contentCanvas.width / (referenceCardWidthMM / 25.4);
-            const dpiFromHeight = contentCanvas.height / (referenceCardHeightMM / 25.4);
-            const autoDPI = (dpiFromWidth + dpiFromHeight) / 2;
-            const baseDPI = bleedSettings.dpi > 0 ? bleedSettings.dpi : autoDPI;
+            let autoDPI = bleedSettings.dpi;
+            if (useAutoDPI) {
+                const dpiFromWidth = contentCanvas.width / (referenceCardWidthMM / 25.4);
+                const dpiFromHeight = contentCanvas.height / (referenceCardHeightMM / 25.4);
+                autoDPI = (dpiFromWidth + dpiFromHeight) / 2;
+            }
+            const baseDPI = useAutoDPI ? autoDPI : bleedSettings.dpi;
             const dpiForMmConversion = isPrintSheetEnabled ? printSheetDPI : baseDPI;
 
             if (doRoundedCorners && roundedCornerRadiusMM_input > 0) {
