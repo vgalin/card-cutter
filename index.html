@@ -133,6 +133,26 @@
             </div>
         </div>
 
+        <div class="settings-section" id="referenceCardSection">
+            <h2 title="Physical size used to automatically calculate image DPI.">Reference Card Size</h2>
+            <div class="input-group">
+                <label for="referenceCardWidth" title="Typical card width.">Width:</label>
+                <input type="number" id="referenceCardWidth" value="63">
+            </div>
+            <div class="input-group">
+                <label for="referenceCardHeight" title="Typical card height.">Height:</label>
+                <input type="number" id="referenceCardHeight" value="88">
+            </div>
+            <div class="input-group">
+                <label for="referenceCardUnits" title="Units for reference dimensions.">Units:</label>
+                <select id="referenceCardUnits">
+                    <option value="mm" selected>mm</option>
+                    <option value="inches">inches</option>
+                </select>
+            </div>
+            <p style="font-size:0.8em; margin-top:5px;">Values here are only used to determine DPI automatically.</p>
+        </div>
+
         <div class="settings-section" id="targetCardDimensionsSection">
             <h2 title="Define target physical dimensions for the card content on the print sheet.">Target Card Dimensions (for Print Sheet)</h2>
             <label><input type="checkbox" id="enableCardSizingForPrint" checked> Enable Custom Card Sizing for Print</label>

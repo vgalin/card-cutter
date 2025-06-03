@@ -47,8 +47,21 @@ async function processImages() {
     const showPreviews = getElementValue('enableImagePreview', 'checked');
 
     const isPrintSheetEnabled = getElementValue('enablePrintSheet', 'checked');
-    const printSheetDPI = isPrintSheetEnabled ? getElementValue('printSheetDPI', 'integer') : (bleedSettings.dpi || 300) ;
-    const dpiForMmConversion = printSheetDPI > 0 ? printSheetDPI : 300; // Ensure valid DPI for conversions
+    const printSheetDPI = isPrintSheetEnabled ? getElementValue('printSheetDPI', 'integer') : 300;
+
+    let referenceCardWidthMM = getElementValue('referenceCardWidth', 'number');
+    let referenceCardHeightMM = getElementValue('referenceCardHeight', 'number');
+    const referenceUnits = getElementValue('referenceCardUnits');
+    if (referenceUnits === 'inches') {
+        referenceCardWidthMM *= 25.4;
+        referenceCardHeightMM *= 25.4;
+    }
+
+    if (!isPositiveNumber(referenceCardWidthMM) || !isPositiveNumber(referenceCardHeightMM)) {
+        alert('Reference card dimensions must be positive numbers.');
+        progressArea.innerHTML = '<p>Error: Invalid reference card size.</p>';
+        return;
+    }
 
     const isCardSizingForPrintEnabled = isPrintSheetEnabled && getElementValue('enableCardSizingForPrint', 'checked');
     // --- End settings retrieval ---
@@ -85,6 +98,12 @@ async function processImages() {
             }
 
             let contentCanvas = workingCanvas; // This is the canvas before final print sizing and bleed
+
+            const dpiFromWidth = contentCanvas.width / (referenceCardWidthMM / 25.4);
+            const dpiFromHeight = contentCanvas.height / (referenceCardHeightMM / 25.4);
+            const autoDPI = (dpiFromWidth + dpiFromHeight) / 2;
+            const baseDPI = bleedSettings.dpi > 0 ? bleedSettings.dpi : autoDPI;
+            const dpiForMmConversion = isPrintSheetEnabled ? printSheetDPI : baseDPI;
 
             if (doRoundedCorners && roundedCornerRadiusMM_input > 0) {
                 const roundedCornerRadiusPx = mmToPixels(roundedCornerRadiusMM_input, dpiForMmConversion); // from utils.js
