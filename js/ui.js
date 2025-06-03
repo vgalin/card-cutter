@@ -110,13 +110,20 @@ async function handleFiles(files) {
 function updateLiveCropPreview() {
     const previewCanvas = document.getElementById('liveCropPreviewCanvas');
     const liveCropPreviewSection = document.getElementById('liveCropPreviewSection');
-    
+    const zoomTop = document.getElementById('zoomTopPreview');
+    const zoomBottom = document.getElementById('zoomBottomPreview');
+    const zoomLeft = document.getElementById('zoomLeftPreview');
+    const zoomRight = document.getElementById('zoomRightPreview');
+
     if (!previewCanvas || !liveCropPreviewSection) return;
     const ctx = previewCanvas.getContext('2d');
     const enableCrop = getElementValue('enableCrop', 'checked');
 
     if (!firstImageForPreview || liveCropPreviewSection.style.display === 'none') {
         ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+        [zoomTop, zoomBottom, zoomLeft, zoomRight].forEach(c => {
+            if (c) c.getContext('2d').clearRect(0,0,c.width,c.height);
+        });
         return;
     }
 
@@ -153,7 +160,56 @@ function updateLiveCropPreview() {
         ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
         ctx.lineWidth = 1;
         ctx.strokeRect(x0, y0, cropW, cropH); // Crop box outline
+
+        const patchSize = 40; // area around crop line
+        const zoomFactor = 4; // how much to enlarge
+
+        const half = patchSize / 2;
+        const midX = Math.floor(img.naturalWidth / 2 - half);
+        const midY = Math.floor(img.naturalHeight / 2 - half);
+
+        if (zoomTop) {
+            const sx = clamp(midX, 0, img.naturalWidth - patchSize);
+            const sy = clamp(crop.top - half, 0, img.naturalHeight - patchSize);
+            drawZoom(zoomTop, sx, sy, patchSize, patchSize, 0, (crop.top - sy) * zoomFactor, 'horizontal');
+        }
+        if (zoomBottom) {
+            const sy = clamp(img.naturalHeight - crop.bottom - half, 0, img.naturalHeight - patchSize);
+            const sx = clamp(midX, 0, img.naturalWidth - patchSize);
+            drawZoom(zoomBottom, sx, sy, patchSize, patchSize, 0, (img.naturalHeight - crop.bottom - sy) * zoomFactor, 'horizontal');
+        }
+        if (zoomLeft) {
+            const sx = clamp(crop.left - half, 0, img.naturalWidth - patchSize);
+            const sy = clamp(midY, 0, img.naturalHeight - patchSize);
+            drawZoom(zoomLeft, sx, sy, patchSize, patchSize, (crop.left - sx) * zoomFactor, 0, 'vertical');
+        }
+        if (zoomRight) {
+            const sx = clamp(img.naturalWidth - crop.right - half, 0, img.naturalWidth - patchSize);
+            const sy = clamp(midY, 0, img.naturalHeight - patchSize);
+            drawZoom(zoomRight, sx, sy, patchSize, patchSize, (img.naturalWidth - crop.right - sx) * zoomFactor, 0, 'vertical');
+        }
     }
+}
+
+function drawZoom(canvas, sx, sy, sw, sh, lineX, lineY, orientation) {
+    const ctx = canvas.getContext('2d');
+    const zoomFactor = 4;
+    canvas.width = sw * zoomFactor;
+    canvas.height = sh * zoomFactor;
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(firstImageForPreview, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (orientation === 'horizontal') {
+        ctx.moveTo(0, lineY);
+        ctx.lineTo(canvas.width, lineY);
+    } else {
+        ctx.moveTo(lineX, 0);
+        ctx.lineTo(lineX, canvas.height);
+    }
+    ctx.stroke();
 }
 
 /**

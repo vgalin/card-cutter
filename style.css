@@ -38,6 +38,23 @@ progress { width: 100%; height: 20px; }
     border: 1px solid #777;
     background-color: #eee;
 }
+#zoomedCropPreviewContainer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    margin-top: 10px;
+}
+.zoomed-side {
+    text-align: center;
+    margin: 5px;
+}
+.zoom-preview {
+    width: 120px;
+    height: 120px;
+    border: 1px solid #777;
+    background-color: #eee;
+    image-rendering: pixelated;
+}
 .input-group { display: flex; align-items: center; margin-bottom: 5px; }
 .input-group label { flex-basis: 120px; margin-right: 10px; margin-top:0; margin-bottom:0; white-space: nowrap;}
 .input-group input, .input-group select { flex-grow: 1; margin-bottom:0; }
