@@ -1,6 +1,8 @@
 // js/ui.js
 
 let firstImageForPreview = null; // Store the first loaded image for live preview
+// Accumulate files across multiple selections/drops
+const accumulatedFilesTransfer = new DataTransfer();
 
 /**
  * Toggles the enabled/disabled state and appearance of an input container.
@@ -74,9 +76,19 @@ function updatePrintSheetCustomSize() {
 async function handleFiles(files) {
     const fileInput = document.getElementById('fileInput');
     if (files.length > 0) {
-        fileInput.files = files; // Ensure the input element itself has the files reference
+        // Add new files while keeping previously selected ones
+        for (const file of files) {
+            // Avoid exact duplicate entries based on name, size and lastModified
+            const exists = Array.from(accumulatedFilesTransfer.files).some(
+                f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified
+            );
+            if (!exists) accumulatedFilesTransfer.items.add(file);
+        }
+
+        fileInput.files = accumulatedFilesTransfer.files;
+
         try {
-            firstImageForPreview = await loadImageFromFile(files[0]);
+            firstImageForPreview = await loadImageFromFile(accumulatedFilesTransfer.files[0]);
             document.getElementById('liveCropPreviewSection').style.display = 'block';
             updateLiveCropPreview();
         } catch (error) {
@@ -85,7 +97,8 @@ async function handleFiles(files) {
             firstImageForPreview = null;
             document.getElementById('liveCropPreviewSection').style.display = 'none';
         }
-    } else {
+    } else if (accumulatedFilesTransfer.files.length === 0) {
+        // No files left at all
         firstImageForPreview = null;
         document.getElementById('liveCropPreviewSection').style.display = 'none';
     }
