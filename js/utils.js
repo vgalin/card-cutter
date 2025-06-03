@@ -89,3 +89,11 @@ function loadImageFromFile(file) {
 function clamp(val, minv, maxv) {
     return Math.max(minv, Math.min(val, maxv));
 }
+/**
+ * Checks if a value is a finite positive number.
+ * @param {number} val - Value to check.
+ * @returns {boolean} True if positive number.
+ */
+function isPositiveNumber(val) {
+    return typeof val === "number" && isFinite(val) && val > 0;
+}
