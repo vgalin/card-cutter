@@ -162,7 +162,8 @@ function updateLiveCropPreview() {
         ctx.strokeRect(x0, y0, cropW, cropH); // Crop box outline
 
         const patchSize = 40; // area around crop line
-        const zoomFactor = 4; // how much to enlarge
+        const zoomInput = document.getElementById('zoomFactor');
+        const zoomFactor = Math.max(2, parseInt(zoomInput?.value) || 4); // how much to enlarge
 
         const half = patchSize / 2;
         const midX = Math.floor(img.naturalWidth / 2 - half);
@@ -171,31 +172,32 @@ function updateLiveCropPreview() {
         if (zoomTop) {
             const sx = clamp(midX, 0, img.naturalWidth - patchSize);
             const sy = clamp(crop.top - half, 0, img.naturalHeight - patchSize);
-            drawZoom(zoomTop, sx, sy, patchSize, patchSize, 0, (crop.top - sy) * zoomFactor, 'horizontal');
+            drawZoom(zoomTop, sx, sy, patchSize, patchSize, 0, (crop.top - sy) * zoomFactor, 'horizontal', zoomFactor);
         }
         if (zoomBottom) {
             const sy = clamp(img.naturalHeight - crop.bottom - half, 0, img.naturalHeight - patchSize);
             const sx = clamp(midX, 0, img.naturalWidth - patchSize);
-            drawZoom(zoomBottom, sx, sy, patchSize, patchSize, 0, (img.naturalHeight - crop.bottom - sy) * zoomFactor, 'horizontal');
+            drawZoom(zoomBottom, sx, sy, patchSize, patchSize, 0, (img.naturalHeight - crop.bottom - sy) * zoomFactor, 'horizontal', zoomFactor);
         }
         if (zoomLeft) {
             const sx = clamp(crop.left - half, 0, img.naturalWidth - patchSize);
             const sy = clamp(midY, 0, img.naturalHeight - patchSize);
-            drawZoom(zoomLeft, sx, sy, patchSize, patchSize, (crop.left - sx) * zoomFactor, 0, 'vertical');
+            drawZoom(zoomLeft, sx, sy, patchSize, patchSize, (crop.left - sx) * zoomFactor, 0, 'vertical', zoomFactor);
         }
         if (zoomRight) {
             const sx = clamp(img.naturalWidth - crop.right - half, 0, img.naturalWidth - patchSize);
             const sy = clamp(midY, 0, img.naturalHeight - patchSize);
-            drawZoom(zoomRight, sx, sy, patchSize, patchSize, (img.naturalWidth - crop.right - sx) * zoomFactor, 0, 'vertical');
+            drawZoom(zoomRight, sx, sy, patchSize, patchSize, (img.naturalWidth - crop.right - sx) * zoomFactor, 0, 'vertical', zoomFactor);
         }
     }
 }
 
-function drawZoom(canvas, sx, sy, sw, sh, lineX, lineY, orientation) {
+function drawZoom(canvas, sx, sy, sw, sh, lineX, lineY, orientation, zoomFactor) {
     const ctx = canvas.getContext('2d');
-    const zoomFactor = 4;
     canvas.width = sw * zoomFactor;
     canvas.height = sh * zoomFactor;
+    canvas.style.width = canvas.width + 'px';
+    canvas.style.height = canvas.height + 'px';
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.drawImage(firstImageForPreview, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
@@ -358,7 +360,7 @@ function initializeEventListeners() {
     }
     
     // Crop value inputs for live preview
-    ['cropLeft', 'cropRight', 'cropTop', 'cropBottom'].forEach(id => {
+    ['cropLeft', 'cropRight', 'cropTop', 'cropBottom', 'zoomFactor'].forEach(id => {
         const input = document.getElementById(id);
         if (input) input.addEventListener('input', updateLiveCropPreview);
     });
