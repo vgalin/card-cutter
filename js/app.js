@@ -55,7 +55,8 @@ async function processImages() {
 
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const baseName = file.name.substring(0, file.name.lastIndexOf('.'));
+        const dotIndex = file.name.lastIndexOf('.');
+        const baseName = dotIndex === -1 ? file.name : file.name.substring(0, dotIndex);
         let currentMimeType = file.type === "image/jpeg" ? "image/jpeg" : "image/png"; // Default to PNG
 
         try {
