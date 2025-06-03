@@ -33,12 +33,6 @@
             <div id="liveCropPreviewContainer">
                 <canvas id="liveCropPreviewCanvas"></canvas>
             </div>
-            <div id="zoomedCropPreviewContainer">
-                <div class="zoomed-side"><canvas id="zoomTopPreview" class="zoom-preview"></canvas><div>Top</div></div>
-                <div class="zoomed-side"><canvas id="zoomBottomPreview" class="zoom-preview"></canvas><div>Bottom</div></div>
-                <div class="zoomed-side"><canvas id="zoomLeftPreview" class="zoom-preview"></canvas><div>Left</div></div>
-                <div class="zoomed-side"><canvas id="zoomRightPreview" class="zoom-preview"></canvas><div>Right</div></div>
-            </div>
             <div class="input-group">
                 <label for="zoomFactor">Zoom Factor:</label>
                 <input type="number" id="zoomFactor" value="4" min="2" max="10" step="1">
@@ -58,14 +52,26 @@
                     <button id="loadCropPresetButton">Load</button>
                     <button id="deleteCropPresetButton">Delete</button>
                 </div>
-                <label for="cropLeft" title="Pixels to crop from the left.">Left (px):</label>
-                <input type="number" id="cropLeft" value="1012">
-                <label for="cropRight" title="Pixels to crop from the right.">Right (px):</label>
-                <input type="number" id="cropRight" value="1012">
-                <label for="cropTop" title="Pixels to crop from the top.">Top (px):</label>
-                <input type="number" id="cropTop" value="650">
-                <label for="cropBottom" title="Pixels to crop from the bottom.">Bottom (px):</label>
-                <input type="number" id="cropBottom" value="650">
+                <div class="input-group crop-side-group">
+                    <label for="cropLeft" title="Pixels to crop from the left.">Left (px):</label>
+                    <input type="number" id="cropLeft" value="1012">
+                    <canvas id="zoomLeftPreview" class="zoom-preview"></canvas>
+                </div>
+                <div class="input-group crop-side-group">
+                    <label for="cropRight" title="Pixels to crop from the right.">Right (px):</label>
+                    <input type="number" id="cropRight" value="1012">
+                    <canvas id="zoomRightPreview" class="zoom-preview"></canvas>
+                </div>
+                <div class="input-group crop-side-group">
+                    <label for="cropTop" title="Pixels to crop from the top.">Top (px):</label>
+                    <input type="number" id="cropTop" value="650">
+                    <canvas id="zoomTopPreview" class="zoom-preview"></canvas>
+                </div>
+                <div class="input-group crop-side-group">
+                    <label for="cropBottom" title="Pixels to crop from the bottom.">Bottom (px):</label>
+                    <input type="number" id="cropBottom" value="650">
+                    <canvas id="zoomBottomPreview" class="zoom-preview"></canvas>
+                </div>
             </div>
         </div>
 
