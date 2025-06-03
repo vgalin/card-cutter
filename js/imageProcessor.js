@@ -137,7 +137,7 @@ function addCutMarks(canvas, bleedPx, cutLengthPx, thicknessPx) {
 
     ctx.strokeStyle = 'black'; // Consider making this configurable
     ctx.lineWidth = thicknessPx;
-    const lineOffset = Math.floor(thicknessPx / 2); // Adjust for line thickness to keep it inside/on bleed edge
+    const lineOffset = thicknessPx / 2; // Align to pixel grid so 1px stays 1px and keep mark inside
 
     // Points for corners of the content area (inside bleed)
     const contentX0 = bleedPx;
