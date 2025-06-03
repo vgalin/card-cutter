@@ -1,0 +1,44 @@
+body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+.container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+h1, h2, h3 { color: #555; }
+.settings-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+label { display: block; margin-top: 10px; margin-bottom: 5px; font-weight: bold; }
+input[type="number"], input[type="text"], input[type="range"], select {
+    width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
+}
+input[type="range"] { padding: 0; }
+input[type="checkbox"] { margin-right: 5px; vertical-align: middle;}
+button {
+    background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px; margin-top: 5px;
+}
+button:hover { background-color: #0056b3; }
+button:disabled { background-color: #cccccc; cursor: not-allowed; }
+.preset-management button { background-color: #6c757d; font-size: 0.9em; padding: 5px 10px; }
+.preset-management button:hover:not(:disabled) { background-color: #545b62; }
+#fileInputDropArea {
+    border: 2px dashed #ccc; padding: 20px; text-align: center; margin-bottom: 20px; border-radius: 5px;
+}
+#fileInputDropArea.dragover { border-color: #007bff; background-color: #f0f8ff; }
+#fileInput { display: block; margin: 10px auto; }
+#outputArea, #progressArea { margin-top: 20px; }
+.file-download-link { display: block; margin: 5px 0; }
+#outputArea img.preview-thumb {
+    max-width: 100px;
+    max-height: 140px;
+    margin: 5px; border: 1px solid #ccc; cursor: pointer; vertical-align: top; border-radius: 3px;
+}
+#outputArea img.preview-thumb:hover { border-color: #007bff; }
+progress { width: 100%; height: 20px; }
+.disabled-look label, .disabled-look input, .disabled-look select, .disabled-look span { color: #aaa !important; }
+
+#liveCropPreviewContainer { margin-bottom: 15px; text-align: center; }
+#liveCropPreviewCanvas {
+    max-width: 100%;
+    max-height: 300px;
+    border: 1px solid #777;
+    background-color: #eee;
+}
+.input-group { display: flex; align-items: center; margin-bottom: 5px; }
+.input-group label { flex-basis: 120px; margin-right: 10px; margin-top:0; margin-bottom:0; white-space: nowrap;}
+.input-group input, .input-group select { flex-grow: 1; margin-bottom:0; }
+.inline-block-container > div { display: inline-block; width: 48%; vertical-align: top;}

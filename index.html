@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Image Processor for TCG Cards</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- External libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Advanced Image Processor for TCG Cards</h1>
+
+        <div id="fileInputDropArea">
+            <p>Drag & Drop image files here, or click button below</p>
+            <input type="file" id="fileInput" multiple accept="image/png, image/jpeg">
+        </div>
+        
+        <div class="settings-section">
+            <h2>Global Settings Management</h2>
+            <label title="Export current values of all settings fields to a JSON file.">
+                <button id="exportSettingsButton">Export Current UI Settings</button>
+            </label>
+            <label for="importSettingsFile" title="Import UI settings from a JSON file.">
+                Import UI Settings File:
+                <input type="file" id="importSettingsFile" accept=".json">
+            </label>
+        </div>
+
+        <div class="settings-section" id="liveCropPreviewSection" style="display:none;">
+            <h2>Live Crop Preview (First Image)</h2>
+            <div id="liveCropPreviewContainer">
+                <canvas id="liveCropPreviewCanvas"></canvas>
+            </div>
+            <p style="text-align:center; font-size:0.9em;">Adjust crop values below to see changes here.</p>
+        </div>
+
+        <div class="settings-section">
+            <h2 title="Define how many pixels to remove from each side of the image.">Crop Settings</h2>
+            <label><input type="checkbox" id="enableCrop" checked> Enable Cropping</label>
+            <div id="cropInputsContainer">
+                <div class="preset-management">
+                    <label for="cropPreset">Crop Preset:</label>
+                    <select id="cropPreset"></select>
+                    <input type="text" id="newCropPresetName" placeholder="New Preset Name">
+                    <button id="saveCropPresetButton">Save</button>
+                    <button id="loadCropPresetButton">Load</button>
+                    <button id="deleteCropPresetButton">Delete</button>
+                </div>
+                <label for="cropLeft" title="Pixels to crop from the left.">Left (px):</label>
+                <input type="number" id="cropLeft" value="1012">
+                <label for="cropRight" title="Pixels to crop from the right.">Right (px):</label>
+                <input type="number" id="cropRight" value="1012">
+                <label for="cropTop" title="Pixels to crop from the top.">Top (px):</label>
+                <input type="number" id="cropTop" value="650">
+                <label for="cropBottom" title="Pixels to crop from the bottom.">Bottom (px):</label>
+                <input type="number" id="cropBottom" value="650">
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2 title="Apply a sharpening filter to enhance details.">Sharpen Settings</h2>
+            <label><input type="checkbox" id="enableSharpen"> Enable Sharpen</label>
+            <div id="sharpenInputsContainer">
+                <label for="sharpenIntensity" title="Strength of the sharpening effect (0.1 to 2.0).">Intensity:</label>
+                <input type="number" id="sharpenIntensity" value="0.5" step="0.1" min="0.1" max="2.0">
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2 title="Adjust brightness, contrast, and gamma of the image.">Image Adjustments</h2>
+            <label><input type="checkbox" id="enableAdjustments"> Enable Adjustments</label>
+            <div id="adjustmentInputsContainer">
+                <label for="brightness" title="Adjust brightness (-100 to 100). 0 is no change.">Brightness: <span id="brightnessValue">0</span></label>
+                <input type="range" id="brightness" min="-100" max="100" value="0">
+                
+                <label for="contrast" title="Adjust contrast (-100 to 100). 0 is no change.">Contrast: <span id="contrastValue">0</span></label>
+                <input type="range" id="contrast" min="-100" max="100" value="0">
+
+                <label for="gamma" title="Adjust gamma (0.1 to 3.0). 1.0 is no change.">Gamma: <span id="gammaValue">1.0</span></label>
+                <input type="range" id="gamma" min="0.1" max="3.0" value="1.0" step="0.01">
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h2 title="Resize the image to specific dimensions. This is a general resize applied early. For print sheet sizing, see 'Target Card Dimensions'.">
+                General Resize Settings
+            </h2>
+            <label><input type="checkbox" id="enableResize"> Enable General Resizing</label>
+            <div id="resizeInputsContainer">
+                <label for="resizeWidth" title="Target width in pixels. 0 or empty to use original/aspect-calculated.">Target Width (px):</label>
+                <input type="number" id="resizeWidth" value="0" min="0">
+                <label for="resizeHeight" title="Target height in pixels. 0 or empty to use original/aspect-calculated.">Target Height (px):</label>
+                <input type="number" id="resizeHeight" value="0" min="0">
+                <label title="Maintain original aspect ratio when resizing."><input type="checkbox" id="resizeMaintainAspect" checked> Maintain Aspect Ratio</label>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2 title="Add a bleed area by extending edge pixels and optional cut marks.">Bleed & Cut Marks Settings</h2>
+            <label><input type="checkbox" id="enableBleed" checked> Enable Bleed & Cut Marks</label>
+            <div id="bleedInputsContainer">
+                <div class="preset-management">
+                    <label for="bleedPreset">Bleed Preset:</label>
+                    <select id="bleedPreset"></select>
+                    <input type="text" id="newBleedPresetName" placeholder="New Preset Name">
+                    <button id="saveBleedPresetButton">Save</button>
+                    <button id="loadBleedPresetButton">Load</button>
+                    <button id="deleteBleedPresetButton">Delete</button>
+                </div>
+                <label for="bleedMM" title="Size of the bleed border in millimeters.">Bleed (mm):</label>
+                <input type="number" id="bleedMM" value="1.0" step="0.1">
+                <label for="bleedDPI" title="Dots Per Inch for mm to pixel conversion if NOT generating a print sheet. Print Sheet DPI is used otherwise.">
+                    DPI (for individual files):
+                </label>
+                <input type="number" id="bleedDPI" value="300">
+                <label title="Add L-shaped cut marks in the bleed area."><input type="checkbox" id="addCutMarks" checked> Add Cut Marks</label>
+                <label for="cutLengthMM" title="Length of each cut mark segment in millimeters.">Cut Mark Length (mm):</label>
+                <input type="number" id="cutLengthMM" value="1.0" step="0.1">
+                <label for="cutThicknessPX" title="Thickness of the cut mark lines in pixels.">Cut Mark Thickness (px):</label>
+                <input type="number" id="cutThicknessPX" value="1">
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2 title="Options for the final output.">Output Options</h2>
+            <label title="Show clickable image previews instead of text links."><input type="checkbox" id="enableImagePreview" checked> Show Image Previews</label>
+            <label title="Apply rounded corners to the card content (before bleed). Output will be PNG."><input type="checkbox" id="enableRoundedCorners"> Enable Rounded Corners</label>
+            <div id="roundedCornersInputsContainer">
+                <label for="roundedCornerRadiusMM" title="Radius of the rounded corners in millimeters (converted using Print Sheet DPI if applicable, else Bleed DPI).">Corner Radius (mm):</label>
+                <input type="number" id="roundedCornerRadiusMM" value="3.0" step="0.1">
+            </div>
+        </div>
+
+        <div class="settings-section" id="targetCardDimensionsSection">
+            <h2 title="Define target physical dimensions for the card content on the print sheet.">Target Card Dimensions (for Print Sheet)</h2>
+            <label><input type="checkbox" id="enableCardSizingForPrint" checked> Enable Custom Card Sizing for Print</label>
+            <div id="cardSizingInputsContainer">
+                <div class="input-group">
+                    <label for="targetCardWidth" title="Desired width of the card content.">Card Width:</label>
+                    <input type="number" id="targetCardWidth" value="63">
+                </div>
+                <div class="input-group">
+                    <label for="targetCardHeight" title="Desired height of the card content.">Card Height:</label>
+                    <input type="number" id="targetCardHeight" value="88">
+                </div>
+                <div class="input-group">
+                    <label for="targetCardUnits" title="Units for card width and height.">Units:</label>
+                    <select id="targetCardUnits">
+                        <option value="mm" selected>mm</option>
+                        <option value="inches">inches</option>
+                    </select>
+                </div>
+                <p style="font-size:0.8em; margin-top:5px;">Note: These dimensions apply to the card *content before bleed*. Bleed will be added. This sizing is applied if 'Enable Print Sheet Output' is also checked.</p>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2 title="Arrange processed cards onto a single page for printing.">Print Sheet Layout</h2>
+            <label><input type="checkbox" id="enablePrintSheet"> Enable Print Sheet Output</label>
+            <div id="printSheetInputsContainer">
+                <div class="input-group">
+                    <label for="printSheetPageSize" title="Select a standard page size or choose custom.">Page Size:</label>
+                    <select id="printSheetPageSize">
+                        <option value="A4">A4 (210x297 mm)</option>
+                        <option value="Letter">Letter (8.5x11 in ~ 215.9x279.4 mm)</option>
+                        <option value="Custom">Custom</option>
+                    </select>
+                </div>
+                <div id="customPageSizeInputs" style="display:none;">
+                    <div class="input-group">
+                         <label for="printSheetPageWidthMM" title="Custom page width in millimeters.">Page Width (mm):</label>
+                         <input type="number" id="printSheetPageWidthMM" value="210">
+                    </div>
+                    <div class="input-group">
+                        <label for="printSheetPageHeightMM" title="Custom page height in millimeters.">Page Height (mm):</label>
+                        <input type="number" id="printSheetPageHeightMM" value="297">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="printSheetOrientation" title="Page orientation.">Orientation:</label>
+                    <select id="printSheetOrientation">
+                        <option value="portrait">Portrait</option>
+                        <option value="landscape">Landscape</option>
+                    </select>
+                </div>
+                 <div class="input-group">
+                    <label for="printSheetMarginMM" title="Margin around the page in millimeters.">Margin (mm):</label>
+                    <input type="number" id="printSheetMarginMM" value="10" step="1">
+                </div>
+                <div class="input-group">
+                    <label for="printSheetCardSpacingMM" title="Spacing between cards (bleed edges) in millimeters.">Card Spacing (mm):</label>
+                    <input type="number" id="printSheetCardSpacingMM" value="2" step="0.5">
+                </div>
+                <div class="input-group">
+                     <label for="printSheetDPI" title="DPI for the final print sheet. Affects all mm to pixel conversions for layout and card sizing.">Print Sheet DPI:</label>
+                     <input type="number" id="printSheetDPI" value="300">
+                </div>
+                 <button id="generatePrintSheetButton" style="display:none;">Generate Print Sheet</button>
+            </div>
+        </div>
+
+        <button id="processImagesButton">Process Images & Get Individual Files</button>
+        <button id="downloadZipButton" style="display:none;">Download All Individual as ZIP</button>
+
+        <div id="progressArea"></div>
+        <div id="outputArea"></div>
+    </div>
+
+    <!-- JavaScript files, loaded in order of dependency -->
+    <script src="js/utils.js" defer></script>
+    <script src="js/presets.js" defer></script>
+    <script src="js/imageProcessor.js" defer></script>
+    <script src="js/ui.js" defer></script>
+    <script src="js/app.js" defer></script>
+</body>
+</html>
