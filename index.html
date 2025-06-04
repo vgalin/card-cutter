@@ -33,10 +33,6 @@
             <div id="liveCropPreviewContainer">
                 <canvas id="liveCropPreviewCanvas"></canvas>
             </div>
-            <div class="input-group">
-                <label for="zoomFactor">Zoom Factor:</label>
-                <input type="number" id="zoomFactor" value="4" min="2" max="10" step="1">
-            </div>
             <p style="text-align:center; font-size:0.9em;">Adjust crop values below to see changes here.</p>
         </div>
 
@@ -71,6 +67,10 @@
                     <label for="cropBottom" title="Pixels to crop from the bottom.">Bottom (px):</label>
                     <input type="number" id="cropBottom" value="650">
                     <canvas id="zoomBottomPreview" class="zoom-preview"></canvas>
+                </div>
+                <div class="input-group">
+                    <label for="zoomFactor">Zoom Factor:</label>
+                    <input type="number" id="zoomFactor" value="4" min="2" max="10" step="1">
                 </div>
             </div>
         </div>
