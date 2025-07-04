@@ -7,14 +7,22 @@
     <link rel="stylesheet" href="style.css">
     <!-- External libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>Advanced Image Processor for TCG Cards</h1>
+        <div class="header-controls">
+            <h1>Advanced Image Processor for TCG Cards</h1>
+            <div class="theme-switcher">
+                <label for="darkModeToggle">Dark Mode</label>
+                <input type="checkbox" id="darkModeToggle">
+            </div>
+        </div>
 
         <div id="fileInputDropArea">
             <p>Drag & Drop image files here, or click button below</p>
             <input type="file" id="fileInput" multiple accept="image/png, image/jpeg">
+            <button id="clearFilesButton" style="display:none;">Clear File List</button>
         </div>
         
         <div class="settings-section">
@@ -170,29 +178,6 @@
             <p style="font-size:0.8em; margin-top:5px;">Values here are used when "Use automatic DPI based on reference card size" is checked.</p>
         </div>
 
-        <div class="settings-section" id="targetCardDimensionsSection">
-            <h2 title="Define target physical dimensions for the card content on the print sheet.">Target Card Dimensions (for Print Sheet)</h2>
-            <label><input type="checkbox" id="enableCardSizingForPrint" checked> Enable Custom Card Sizing for Print</label>
-            <div id="cardSizingInputsContainer">
-                <div class="input-group">
-                    <label for="targetCardWidth" title="Desired width of the card content.">Card Width:</label>
-                    <input type="number" id="targetCardWidth" value="63">
-                </div>
-                <div class="input-group">
-                    <label for="targetCardHeight" title="Desired height of the card content.">Card Height:</label>
-                    <input type="number" id="targetCardHeight" value="88">
-                </div>
-                <div class="input-group">
-                    <label for="targetCardUnits" title="Units for card width and height.">Units:</label>
-                    <select id="targetCardUnits">
-                        <option value="mm" selected>mm</option>
-                        <option value="inches">inches</option>
-                    </select>
-                </div>
-                <p style="font-size:0.8em; margin-top:5px;">Note: These dimensions apply to the card *content before bleed*. Bleed will be added. This sizing is applied if 'Enable Print Sheet Output' is also checked.</p>
-            </div>
-        </div>
-
         <div class="settings-section">
             <h2 title="Arrange processed cards onto a single page for printing.">Print Sheet Layout</h2>
             <label><input type="checkbox" id="enablePrintSheet"> Enable Print Sheet Output</label>
@@ -234,22 +219,34 @@
                      <label for="printSheetDPI" title="DPI for the final print sheet. Affects all mm to pixel conversions for layout and card sizing.">Print Sheet DPI:</label>
                      <input type="number" id="printSheetDPI" value="300">
                 </div>
-                 <button id="generatePrintSheetButton" style="display:none;">Generate Print Sheet</button>
-            </div>
+                <div class="input-group">
+                    <label for="printSheetBgColor" title="Background color of the print sheet.">Background Color:</label>
+                    <input type="color" id="printSheetBgColor" value="#FFFFFF">
+                </div>
+                <div class="input-group">
+                    <label for="cardQuantity" title="Number of copies to generate for each selected image.">Copies per Image:</label>
+                    <input type="number" id="cardQuantity" value="1" min="1">
+                </div>
+                 </div>
         </div>
 
         <button id="processImagesButton">Process Images & Get Individual Files</button>
         <button id="downloadZipButton" style="display:none;">Download All Individual as ZIP</button>
+                 <button id="generatePrintSheetButton" style="display:none;">Generate Print Sheet</button>
+
+        <div id="progressArea"></div>
+        <div id="outputArea"></div>
+    </div>
 
         <div id="progressArea"></div>
         <div id="outputArea"></div>
     </div>
 
     <!-- JavaScript files, loaded in order of dependency -->
-    <script src="js/utils.js" defer></script>
-    <script src="js/presets.js" defer></script>
-    <script src="js/imageProcessor.js" defer></script>
-    <script src="js/ui.js" defer></script>
-    <script src="js/app.js" defer></script>
+    <script src="js/utils.js"></script>
+    <script src="js/presets.js"></script>
+    <script src="js/imageProcessor.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>

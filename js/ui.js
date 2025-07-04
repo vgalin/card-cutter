@@ -2,7 +2,7 @@
 
 let firstImageForPreview = null; // Store the first loaded image for live preview
 // Accumulate files across multiple selections/drops
-const accumulatedFilesTransfer = new DataTransfer();
+let accumulatedFilesTransfer = new DataTransfer();
 
 /**
  * Toggles the enabled/disabled state and appearance of an input container.
@@ -37,7 +37,6 @@ function toggleSharpenInputs() { toggleInputs('sharpenInputsContainer', getEleme
 function toggleAdjustmentInputs() { toggleInputs('adjustmentInputsContainer', getElementValue('enableAdjustments', 'checked')); }
 function toggleResizeInputs() { toggleInputs('resizeInputsContainer', getElementValue('enableResize', 'checked')); }
 function toggleRoundedCornersInputs() { toggleInputs('roundedCornersInputsContainer', getElementValue('enableRoundedCorners', 'checked')); }
-function toggleCardSizingInputs() { toggleInputs('cardSizingInputsContainer', getElementValue('enableCardSizingForPrint', 'checked')); }
 
 function toggleAutoDPI() {
     const autoEnabled = getElementValue('useAutoDPI', 'checked');
@@ -49,14 +48,6 @@ function togglePrintSheetInputs() {
     const enabled = getElementValue('enablePrintSheet', 'checked');
     toggleInputs('printSheetInputsContainer', enabled);
     document.getElementById('generatePrintSheetButton').style.display = (enabled && window.processedFilesData && window.processedFilesData.length > 0) ? 'inline-block' : 'none';
-    
-    const targetCardDimensionsSection = document.getElementById('targetCardDimensionsSection');
-    if (targetCardDimensionsSection) {
-        targetCardDimensionsSection.style.display = enabled ? 'block' : 'none';
-    }
-    if (enabled) { // If print sheet is enabled, sync its sub-toggle
-        toggleCardSizingInputs(); // This reads the 'enableCardSizingForPrint' checkbox
-    }
 }
 
 /**
@@ -75,6 +66,8 @@ function updatePrintSheetCustomSize() {
  */
 async function handleFiles(files) {
     const fileInput = document.getElementById('fileInput');
+    const clearFilesButton = document.getElementById('clearFilesButton');
+
     if (files.length > 0) {
         // Add new files while keeping previously selected ones
         for (const file of files) {
@@ -86,6 +79,8 @@ async function handleFiles(files) {
         }
 
         fileInput.files = accumulatedFilesTransfer.files;
+        if (clearFilesButton) clearFilesButton.style.display = 'inline-block';
+
 
         try {
             firstImageForPreview = await loadImageFromFile(accumulatedFilesTransfer.files[0]);
@@ -101,8 +96,34 @@ async function handleFiles(files) {
         // No files left at all
         firstImageForPreview = null;
         document.getElementById('liveCropPreviewSection').style.display = 'none';
+        if (clearFilesButton) clearFilesButton.style.display = 'none';
     }
 }
+
+/**
+ * Clears the list of selected files.
+ */
+function clearFileList() {
+    const fileInput = document.getElementById('fileInput');
+    const clearFilesButton = document.getElementById('clearFilesButton');
+    
+    accumulatedFilesTransfer = new DataTransfer();
+    fileInput.files = accumulatedFilesTransfer.files;
+    
+    firstImageForPreview = null;
+    document.getElementById('liveCropPreviewSection').style.display = 'none';
+    if (clearFilesButton) clearFilesButton.style.display = 'none';
+    
+    // Also clear the output areas
+    document.getElementById('outputArea').innerHTML = '';
+    document.getElementById('progressArea').innerHTML = '';
+    document.getElementById('downloadZipButton').style.display = 'none';
+    document.getElementById('generatePrintSheetButton').style.display = 'none';
+    window.processedFilesData = [];
+    
+    updateLiveCropPreview();
+}
+
 
 /**
  * Updates the live crop preview canvas.
@@ -196,8 +217,6 @@ function drawZoom(canvas, sx, sy, sw, sh, lineX, lineY, orientation, zoomFactor)
     const ctx = canvas.getContext('2d');
     canvas.width = sw * zoomFactor;
     canvas.height = sh * zoomFactor;
-    canvas.style.width = canvas.width + 'px';
-    canvas.style.height = canvas.height + 'px';
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.drawImage(firstImageForPreview, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
@@ -319,7 +338,11 @@ function initializeEventListeners() {
     // File Input and Drag & Drop
     const fileInput = document.getElementById('fileInput');
     const fileInputDropArea = document.getElementById('fileInputDropArea');
+    const clearFilesButton = document.getElementById('clearFilesButton');
+
     if (fileInput) fileInput.addEventListener('change', e => handleFiles(e.target.files));
+    if (clearFilesButton) clearFilesButton.addEventListener('click', clearFileList);
+
     if (fileInputDropArea) {
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             fileInputDropArea.addEventListener(eventName, e => {
@@ -350,7 +373,6 @@ function initializeEventListeners() {
         'enableResize': toggleResizeInputs,
         'enableBleed': toggleBleedInputs,
         'enableRoundedCorners': toggleRoundedCornersInputs,
-        'enableCardSizingForPrint': toggleCardSizingInputs,
         'enablePrintSheet': togglePrintSheetInputs,
         'useAutoDPI': toggleAutoDPI,
     };
@@ -394,6 +416,10 @@ function initializeEventListeners() {
     if (printSheetPageSizeSelect) printSheetPageSizeSelect.addEventListener('change', updatePrintSheetCustomSize);
 
     // Main Action Buttons are handled in app.js as they trigger core logic
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    if (darkModeToggle) {
+        darkModeToggle.addEventListener('change', (e) => toggleDarkMode(e.target.checked));
+    }
 }
 
 /**
@@ -427,7 +453,24 @@ function initializeUI() {
             display.textContent = slider.value;
         }
     });
+
+    // Initialize dark mode
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const savedMode = localStorage.getItem('darkMode');
+    if (savedMode === '1' || (savedMode === null && prefersDark)) {
+        if (darkModeToggle) darkModeToggle.checked = true;
+        toggleDarkMode(true);
+    } else {
+        if (darkModeToggle) darkModeToggle.checked = false;
+        toggleDarkMode(false);
+    }
 }
 
 // Expose functions that might be called from presets.js or other modules if needed
 window.updateLiveCropPreview = updateLiveCropPreview;
+
+function toggleDarkMode(enabled) {
+    document.body.classList.toggle('dark-mode', enabled);
+    localStorage.setItem('darkMode', enabled ? '1' : '0');
+}

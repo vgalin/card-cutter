@@ -39,7 +39,7 @@ async function processImages() {
     const generalResizeMaintainAspect = doGeneralResize ? getElementValue('resizeMaintainAspect', 'checked') : true;
 
     const doRoundedCorners = getElementValue('enableRoundedCorners', 'checked');
-    const roundedCornerRadiusMM_input = doRoundedCorners ? getElementValue('roundedCornerRadiusMM', 'number') : 0;
+    const roundedCornerRadiusMM = doRoundedCorners ? getElementValue('roundedCornerRadiusMM', 'number') : 0;
 
     const doBleed = getElementValue('enableBleed', 'checked');
     const bleedSettings = doBleed ? getCurrentBleedSettings() : { mm: 0, dpi: 300, cutMarks: false, cutLength: 0, cutThickness: 0 }; // from presets.js
@@ -49,22 +49,17 @@ async function processImages() {
 
     const isPrintSheetEnabled = getElementValue('enablePrintSheet', 'checked');
     const printSheetDPI = isPrintSheetEnabled ? getElementValue('printSheetDPI', 'integer') : 300;
+    
+    const isCardSizingForPrintEnabled = isPrintSheetEnabled;
 
-    let referenceCardWidthMM = getElementValue('referenceCardWidth', 'number');
-    let referenceCardHeightMM = getElementValue('referenceCardHeight', 'number');
-    const referenceUnits = getElementValue('referenceCardUnits');
-    if (referenceUnits === 'inches') {
-        referenceCardWidthMM *= 25.4;
-        referenceCardHeightMM *= 25.4;
+    let referenceCardWidthMM = 0;
+    let referenceCardHeightMM = 0;
+    if (useAutoDPI || isCardSizingForPrintEnabled) {
+        const units = getElementValue('referenceCardUnits');
+        const multiplier = units === 'inches' ? 25.4 : 1;
+        referenceCardWidthMM = (getElementValue('referenceCardWidth', 'number') * multiplier) || 63;
+        referenceCardHeightMM = (getElementValue('referenceCardHeight', 'number') * multiplier) || 88;
     }
-
-    if (useAutoDPI && (!isPositiveNumber(referenceCardWidthMM) || !isPositiveNumber(referenceCardHeightMM))) {
-        alert('Reference card dimensions must be positive numbers.');
-        progressArea.innerHTML = '<p>Error: Invalid reference card size.</p>';
-        return;
-    }
-
-    const isCardSizingForPrintEnabled = isPrintSheetEnabled && getElementValue('enableCardSizingForPrint', 'checked');
     // --- End settings retrieval ---
 
     for (let i = 0; i < files.length; i++) {
@@ -102,31 +97,35 @@ async function processImages() {
 
             let autoDPI = bleedSettings.dpi;
             if (useAutoDPI) {
-                const dpiFromWidth = contentCanvas.width / (referenceCardWidthMM / 25.4);
-                const dpiFromHeight = contentCanvas.height / (referenceCardHeightMM / 25.4);
-                autoDPI = (dpiFromWidth + dpiFromHeight) / 2;
+                if (referenceCardWidthMM > 0 && referenceCardHeightMM > 0) {
+                    const dpiFromWidth = contentCanvas.width / (referenceCardWidthMM / 25.4);
+                    const dpiFromHeight = contentCanvas.height / (referenceCardHeightMM / 25.4);
+                    autoDPI = (dpiFromWidth + dpiFromHeight) / 2;
+                } else {
+                    console.warn('Auto-DPI enabled, but reference card dimensions are zero. Falling back to bleed DPI setting.');
+                }
             }
             const baseDPI = useAutoDPI ? autoDPI : bleedSettings.dpi;
             const dpiForMmConversion = isPrintSheetEnabled ? printSheetDPI : baseDPI;
 
-            if (doRoundedCorners && roundedCornerRadiusMM_input > 0) {
-                const roundedCornerRadiusPx = mmToPixels(roundedCornerRadiusMM_input, dpiForMmConversion); // from utils.js
+            if (doRoundedCorners && roundedCornerRadiusMM > 0) {
+                const roundedCornerRadiusPx = mmToPixels(roundedCornerRadiusMM, dpiForMmConversion); // from utils.js
                 contentCanvas = applyRoundedCorners(contentCanvas, roundedCornerRadiusPx);
                 currentMimeType = 'image/png'; // Rounded corners need transparency
             }
 
             // Specific sizing for print sheet (applied to contentCanvas)
             if (isCardSizingForPrintEnabled) {
-                let targetCardW_mm = getElementValue('targetCardWidth', 'number');
-                let targetCardH_mm = getElementValue('targetCardHeight', 'number');
-                const units = getElementValue('targetCardUnits');
-                if (units === 'inches') {
-                    targetCardW_mm *= 25.4;
-                    targetCardH_mm *= 25.4;
-                }
-                const targetContentPxW = mmToPixels(targetCardW_mm, dpiForMmConversion);
-                const targetContentPxH = mmToPixels(targetCardH_mm, dpiForMmConversion);
-                contentCanvas = resizeImage(contentCanvas, targetContentPxW, targetContentPxH, true); // Maintain aspect for card content
+                const targetContentPxW = mmToPixels(referenceCardWidthMM, dpiForMmConversion);
+                const targetContentPxH = mmToPixels(referenceCardHeightMM, dpiForMmConversion);
+
+                // Resize the image to match the target content size
+                const sizedCanvas = document.createElement('canvas');
+                sizedCanvas.width = targetContentPxW;
+                sizedCanvas.height = targetContentPxH;
+                const sizedCtx = sizedCanvas.getContext('2d');
+                sizedCtx.drawImage(contentCanvas, 0, 0, targetContentPxW, targetContentPxH);
+                contentCanvas = sizedCanvas;
             }
             
             const widthNoBleed = contentCanvas.width;
@@ -210,6 +209,10 @@ async function processImages() {
  * Downloads all processed images as a ZIP file.
  */
 async function downloadAllAsZip() {
+    if (typeof JSZip === 'undefined') {
+        alert('Error: JSZip library is not loaded. Cannot create ZIP file.');
+        return;
+    }
     if (window.processedFilesData.length === 0) {
         alert("No files processed to download.");
         return;
@@ -235,7 +238,7 @@ async function downloadAllAsZip() {
 }
 
 /**
- * Generates a print sheet from processed images.
+ * Generates a multi-page PDF print sheet from processed images.
  */
 function generatePrintSheet() {
     if (!window.processedFilesData || window.processedFilesData.length === 0) {
@@ -243,97 +246,133 @@ function generatePrintSheet() {
         return;
     }
 
-    const outputArea = document.getElementById('outputArea');
-    const progressPara = document.createElement('p');
-    progressPara.textContent = 'Generating print sheet... ';
-    // Clear previous individual previews/links before adding print sheet link and progress.
-    outputArea.querySelectorAll('img.preview-thumb, a.file-download-link:not([download^="print_sheet"]), br, p').forEach(el => el.remove());
-    outputArea.appendChild(progressPara);
+    const { jsPDF } = window.jspdf;
+    if (!jsPDF) {
+        alert("Error: jsPDF library is not loaded. Cannot create PDF file.");
+        return;
+    }
 
+    const outputArea = document.getElementById('outputArea');
+    let printSheetContainer = document.getElementById('printSheetContainer');
+    if (!printSheetContainer) {
+        printSheetContainer = document.createElement('div');
+        printSheetContainer.id = 'printSheetContainer';
+        outputArea.appendChild(printSheetContainer);
+    }
+    printSheetContainer.innerHTML = '<p>Generating PDF print sheet...</p>';
+
+    // --- Get Settings ---
     let pageWidthMM = getElementValue('printSheetPageWidthMM', 'number');
     let pageHeightMM = getElementValue('printSheetPageHeightMM', 'number');
     const pageSizeType = getElementValue('printSheetPageSize');
-
     if (pageSizeType === 'A4') { pageWidthMM = 210; pageHeightMM = 297; }
     else if (pageSizeType === 'Letter') { pageWidthMM = 215.9; pageHeightMM = 279.4; }
-    
+
     const orientation = getElementValue('printSheetOrientation');
-    if (orientation === 'landscape') {
-        [pageWidthMM, pageHeightMM] = [pageHeightMM, pageWidthMM]; // Swap
-    }
-    
-    const printSheetDPI = getElementValue('printSheetDPI', 'integer');
-    if (printSheetDPI <= 0) {
-        alert("Print Sheet DPI must be a positive number.");
-        progressPara.textContent = "Error: Invalid Print Sheet DPI.";
-        return;
+    const isLandscape = orientation === 'landscape';
+    if (isLandscape) {
+        [pageWidthMM, pageHeightMM] = [pageHeightMM, pageWidthMM];
     }
 
     const marginMM = getElementValue('printSheetMarginMM', 'number');
     const cardSpacingMM = getElementValue('printSheetCardSpacingMM', 'number');
 
-    const pageWidthPx = mmToPixels(pageWidthMM, printSheetDPI);
-    const pageHeightPx = mmToPixels(pageHeightMM, printSheetDPI);
-    const marginPx = mmToPixels(marginMM, printSheetDPI);
-    const cardSpacingPx = mmToPixels(cardSpacingMM, printSheetDPI);
+    const usableWidthMM = pageWidthMM - (2 * marginMM);
+    const usableHeightMM = pageHeightMM - (2 * marginMM);
 
-    const sheetCanvas = document.createElement('canvas');
-    sheetCanvas.width = pageWidthPx;
-    sheetCanvas.height = pageHeightPx;
-    const sheetCtx = sheetCanvas.getContext('2d');
-    sheetCtx.fillStyle = 'white'; // Background color for the sheet
-    sheetCtx.fillRect(0, 0, pageWidthPx, pageHeightPx);
+    const isPrintSheetEnabled = getElementValue('enablePrintSheet', 'checked');
+    const printSheetDPI = getElementValue('printSheetDPI', 'integer');
 
-    let currentX = marginPx;
-    let currentY = marginPx;
-    let maxRowHeight = 0;
+    // --- PDF Initialization ---
+    const doc = new jsPDF({
+        orientation: orientation,
+        unit: 'mm',
+        format: [pageWidthMM, pageHeightMM]
+    });
+
+    let currentX = marginMM;
+    let currentY = marginMM;
+    let maxRowHeightMM = 0;
     let cardsOnSheet = 0;
+    let pageCount = 1;
 
-    for (const cardData of window.processedFilesData) {
-        // Ensure cardData.canvasElement is valid (it should be from processImages)
+    const cardQuantity = getElementValue('cardQuantity', 'integer');
+    const allCardsToPrint = [];
+    for (let i = 0; i < cardQuantity; i++) {
+        allCardsToPrint.push(...window.processedFilesData);
+    }
+
+    // --- Card Processing Loop ---
+    for (let i = 0; i < allCardsToPrint.length; i++) {
+        const cardData = allCardsToPrint[i];
         if (!cardData.canvasElement || !(cardData.canvasElement instanceof HTMLCanvasElement)) {
-            console.warn(`Skipping card "${cardData.name}" due to invalid canvas element for print sheet.`);
+            console.warn(`Skipping card "${cardData.name}" due to invalid canvas element.`);
             continue;
         }
-        const cardCanvasToDraw = cardData.canvasElement;
-        const cardPrintWidthPx = cardCanvasToDraw.width;  // This is full width WITH bleed
-        const cardPrintHeightPx = cardCanvasToDraw.height; // This is full height WITH bleed
 
-        if (currentX + cardPrintWidthPx > pageWidthPx - marginPx + 1 && currentX > marginPx + 1) { // +1 for float issues, check if not first item in row
-            currentX = marginPx;
-            currentY += maxRowHeight + cardSpacingPx;
-            maxRowHeight = 0;
+        let cardWidthMM, cardHeightMM;
+
+        if (isPrintSheetEnabled) {
+            let targetCardW_mm = getElementValue('referenceCardWidth', 'number');
+            let targetCardH_mm = getElementValue('referenceCardHeight', 'number');
+            const units = getElementValue('referenceCardUnits');
+            if (units === 'inches') {
+                targetCardW_mm *= 25.4;
+                targetCardH_mm *= 25.4;
+            }
+            cardWidthMM = targetCardW_mm;
+            cardHeightMM = targetCardH_mm;
+        } else {
+            // Use the canvas dimensions and DPI to calculate the size in mm
+            const dpi = useAutoDPI ? autoDPI : getElementValue('bleedDPI', 'integer');
+            cardWidthMM = (cardData.widthNoBleed / dpi) * 25.4;
+            cardHeightMM = (cardData.heightNoBleed / dpi) * 25.4;
         }
-        
-        if (currentY + cardPrintHeightPx > pageHeightPx - marginPx + 1) { // +1 for float issues
-            console.log(`Not enough space for card "${cardData.name}". CurrentY: ${currentY}, CardH: ${cardPrintHeightPx}, Page usable height: ${pageHeightPx - marginPx}`);
-            break; // Stop if card doesn't fit vertically
+
+        const bleedMM = getElementValue('enableBleed', 'checked') ? getElementValue('bleedMM', 'number') : 0;
+        const cardTotalWidthMM = cardWidthMM + (2 * bleedMM);
+        const cardTotalHeightMM = cardHeightMM + (2 * bleedMM);
+
+        if (currentX + cardTotalWidthMM > usableWidthMM + marginMM - 0.001) {
+            currentX = marginMM;
+            currentY += maxRowHeightMM + cardSpacingMM;
+            maxRowHeightMM = 0;
         }
-        
-        sheetCtx.drawImage(cardCanvasToDraw, currentX, currentY);
+
+        if (currentY + cardTotalHeightMM > usableHeightMM + marginMM - 0.001) {
+            doc.addPage();
+            pageCount++;
+            currentX = marginMM;
+            currentY = marginMM;
+            maxRowHeightMM = 0;
+        }
+
+        doc.addImage(cardData.canvasElement, 'PNG', currentX, currentY, cardTotalWidthMM, cardTotalHeightMM);
         cardsOnSheet++;
-        currentX += cardPrintWidthPx + cardSpacingPx;
-        if (cardPrintHeightPx > maxRowHeight) {
-            maxRowHeight = cardPrintHeightPx;
+
+        currentX += cardTotalWidthMM + cardSpacingMM;
+        if (cardTotalHeightMM > maxRowHeightMM) {
+            maxRowHeightMM = cardTotalHeightMM;
         }
     }
 
-    if (cardsOnSheet === 0 && window.processedFilesData.length > 0) {
-        progressPara.textContent = 'Print sheet generated, but no cards could fit with current settings. Try adjusting page size, margins, or card dimensions.';
-        console.warn("No cards fit on the print sheet.");
+    // --- Finalize PDF ---
+    if (cardsOnSheet === 0) {
+        printSheetContainer.innerHTML = '<p>Print sheet generated, but no cards could fit. Try different settings.</p>';
         return;
-    } else if (cardsOnSheet < window.processedFilesData.length) {
-         progressPara.textContent += ` Not all cards fit. ${cardsOnSheet} of ${window.processedFilesData.length} placed.`;
     }
 
-    const sheetDataUrl = sheetCanvas.toDataURL('image/png'); // Print sheets are usually best as PNG
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+
     const link = document.createElement('a');
-    link.href = sheetDataUrl;
-    link.download = 'print_sheet.png';
-    link.textContent = 'Download Print Sheet (PNG)';
+    link.href = pdfUrl;
+    link.download = 'print_sheet.pdf';
+    link.textContent = `Download Print Sheet PDF (${pageCount} page(s))`;
     link.classList.add('file-download-link');
-    outputArea.appendChild(link);
-    progressPara.textContent += ' Print sheet generated.';
+
+    printSheetContainer.innerHTML = ''; // Clear the "generating" message
+    printSheetContainer.appendChild(link);
 }
 
 
